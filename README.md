@@ -9,13 +9,13 @@
 It is a native Copilot **plugin** that adds:
 
 - **An eight-role agent team**: orchestrator, oracle, council, librarian, explorer, designer, fixer, and observer, plus a hidden `councillor` seat agent. Each role has its own model, reasoning effort, tools, MCP servers, and skill policy.
-- **Skills**: `simplify`, `codemap`, and `pragmatic-engineering`.
+- **Eleven skills**: `simplify`, `codemap`, `pragmatic-engineering`, `deepwork`, `verification-planning`, `worktrees`, `clonedeps`, `reflect`, `loop-engineering`, `interview`, and `oh-my-copilot-slim` (setup help).
+- **Commands**: `/deepwork`, `/reflect`, `/omcs-loop` (upstream's `/loop`), `/interview`, and `/preset`.
+- **Presets**: multiple presets with `extends` inheritance, model fallback chains, and runtime switching with `/preset`.
+- **Orchestrator automation**: council keyword trigger, per-turn phase reminder, repeated tool-call guard, and image routing to observer. Each can be turned off.
+- **Tools**: structural search/replace with [ast-grep](https://ast-grep.github.io) (replace is a dry run unless asked), an enhanced web fetch (`llms.txt`, main-content extraction), opt-in external [ACP](https://agentclientprotocol.com) agents, and a `doctor` that checks everything against your Copilot runtime.
 - **A bundled [CodeGraph](https://github.com/colbymchenry/codegraph) MCP server** (`codegraph`) for the roles whose preset lists it, with opt-in repository indexing.
-- **A small extension** with three tools and two hooks:
-  - `omcs_doctor` checks the preset (and CodeGraph) against your Copilot runtime.
-  - `omcs_council_roster` returns the configured council seats.
-  - `omcs_codegraph_init` builds a CodeGraph index for the current repository, only after you confirm.
-  - The hooks apply each role's MCP and skill policy at runtime.
+- **Project-local customization**: per-project config, per-role prompt overrides, and `disabled_agents`/`disabled_hooks`/`disabled_commands`.
 
 This is not an OpenCode launcher and does not need OpenCode.
 
@@ -58,7 +58,7 @@ copilot plugin uninstall oh-my-copilot-slim@oh-my-copilot-slim
 
 ```sh
 copilot plugin list   # shows oh-my-copilot-slim
-copilot skill list    # shows codemap, pragmatic-engineering, simplify under "Plugin skills"
+copilot skill list    # shows the 11 skills under "Plugin skills"
 copilot mcp list      # shows codegraph under "Plugin servers"
 ```
 
@@ -68,6 +68,8 @@ Then, inside a session, ask: *"run omcs_doctor"*. It prints a per-role table sho
 - whether the preset model is available and supports the requested reasoning effort;
 - whether its MCP servers and skills are present;
 - whether the agent files have drifted from the preset;
+- the active preset, its `extends` chain, the chosen model in each fallback chain, and whether the live preset override is applied;
+- prompt overrides, hooks, commands, image routing, ast-grep, ACP agents, and config warnings;
 - CodeGraph status: where the active `codegraph` server comes from, Node.js/npx availability, and whether the current repository has an index.
 
 ## Use
@@ -82,15 +84,50 @@ The orchestrator plans the work and delegates to the specialists with Copilot's 
 | Role | Model (preset) | Effort | Tools | MCP servers | Skills | Purpose |
 |---|---|---|---|---|---|---|
 | orchestrator | gpt-6.1-sol | default | all | all except `context7` | all | Plans, delegates, verifies |
-| oracle | claude-opus-5.5 | high | read, search, shell, skill | codegraph | simplify, codemap | Architecture, review, hard bugs (read-only) |
+| oracle | claude-opus-5.5 | high | read, search, shell, skill, ast-grep search | codegraph | simplify, codemap | Architecture, review, hard bugs (read-only) |
 | council | gpt-6.1-sol | high | none | none | none | Synthesizes council seat answers |
-| librarian | gpt-6-luna | default | read, search, web | gh_grep, context7 | none | External docs and code examples |
-| explorer | gpt-6-luna | default | read, search, shell, skill | codegraph | codemap | Fast read-only codebase recon |
-| designer | gpt-6-luna | default | read, search, edit, shell | none | none | UI/UX implementation and review |
-| fixer | gpt-6-luna | max | read, search, edit, shell, skill | codegraph | simplify, pragmatic-engineering | Bounded implementation |
-| observer | gpt-6-luna | default | read, search | none | none | Images, PDFs, diagrams |
+| librarian | gpt-6-luna | default | read, search, web fetch/search, smartfetch, ast-grep search | gh_grep, context7 | none | External docs and code examples |
+| explorer | gpt-6-luna | default | read, search, shell, skill, ast-grep search | codegraph | codemap | Fast read-only codebase recon |
+| designer | gpt-6-luna | default | read, search, edit, shell, ast-grep | none | none | UI/UX implementation and review |
+| fixer | gpt-6-luna | max | read, search, edit, shell, skill, ast-grep | codegraph | simplify, pragmatic-engineering | Bounded implementation |
+| observer | gpt-6-luna | default | read, search, ast-grep search | none | none | Images, PDFs, diagrams |
 
 The preset values come from [`presets/github-copilot.json`](presets/github-copilot.json). It uses upstream's preset format; the `github-copilot/` model prefix is stripped because native Copilot model IDs don't have it.
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `/deepwork <task>` | Large, risky, multi-phase work: plan, gates, verified execution (the `deepwork` skill). |
+| `/reflect [--sessions] [--last N] [focus]` | Looks for repeated work and proposes skill, config, or prompt improvements. |
+| `/omcs-loop <goal, success criteria, max attempts>` | Execute → verify loop with the fixer. Upstream calls it `/loop`; Copilot already has a built-in `/loop`. |
+| `/interview [idea]` | Refines a feature idea through questions (`ask_user`) and saves a Markdown spec to `interview/<slug>.md`. |
+| `/preset [name]` | Lists presets, or switches and saves the choice to your user config. |
+
+Commands that create working files (`/deepwork`, `/omcs-loop`, image routing) put them under `.slim/` in the repository; add `.slim/` to your `.gitignore`.
+
+### Tools
+
+| Tool | Roles | What it does |
+|---|---|---|
+| `omcs_ast_grep_search` | all but council | Structural code search with [ast-grep](https://ast-grep.github.io) patterns. |
+| `omcs_ast_grep_replace` | orchestrator, designer, fixer | Structural rewrite. **Dry run by default**; writes only with `dryRun: false`. |
+| `omcs_smartfetch` | orchestrator, librarian | Web fetch that prefers `llms.txt` on docs sites, extracts the main content, adds metadata, and can save binaries. |
+| `omcs_acp_run` | orchestrator | Runs a task on an external ACP agent you configured (off by default). |
+| `omcs_codegraph_init` | orchestrator | Builds a CodeGraph index after you confirm. |
+| `omcs_council_roster` | orchestrator | Returns the configured council seats. |
+| `omcs_doctor` | any | Health report. |
+
+ast-grep paths are restricted to the current repository. It uses `ast-grep` on your PATH, or downloads the pinned `@ast-grep/cli@0.51.0` with `npx` on first use.
+
+### Automation
+
+Four hooks run for the orchestrator. Turn any off with `disabled_hooks`:
+
+- **`council-inject`**: council keywords (for example "ask the council", in several languages) inject the Council Mode procedure once per session. Text in code blocks is ignored, and slash commands never trigger it.
+- **`phase-reminder`**: a short workflow reminder on every orchestrator turn.
+- **`tool-loop-guard`**: warns after 3 identical tool calls with identical results, and blocks the 6th identical `view`/`grep`/`glob` call.
+- **`image-routing`**: if the session model can't read images, saves attachments to `.slim/images/` and tells the orchestrator to delegate them to observer.
 
 ### MCP servers
 
@@ -135,61 +172,73 @@ If no seats are configured, the orchestrator tells you so and offers oracle inst
 
 ## Configure
 
-### Models and effort
-
-Copilot chooses each role's model in this order:
-
-1. A per-call value.
-2. Your Copilot `subagents` override, set with `/subagents` or in `~/.copilot/settings.json`.
-3. The agent file's `model` and `reasoningEffort`.
-4. The session's model.
-
-To change a role's model, use `/subagents`. Plugin files are overwritten on update.
-
-### Policy overrides
-
-Optional overrides live in `oh-my-copilot-slim.json`. The project file (`.github/oh-my-copilot-slim.json`) wins over the user file (`~/.copilot/oh-my-copilot-slim.json`, or `$COPILOT_HOME`), which wins over the plugin default. Merging is per role: the fields you set replace the defaults for that role.
+All settings live in `oh-my-copilot-slim.json`: the plugin default, then `~/.copilot/oh-my-copilot-slim.json` (user), then `.github/oh-my-copilot-slim.json` (project); later files win. The full reference is in [docs/configuration.md](docs/configuration.md). Or ask the orchestrator to *"configure oh-my-copilot-slim"*: the `oh-my-copilot-slim` skill proposes the change.
 
 ```json
 {
-  "presets": { "github-copilot": { "fixer": { "skills": ["*"] } } },
-  "enforcement": "deny"
+  "preset": "cheap",
+  "presets": {
+    "cheap": {
+      "extends": "github-copilot",
+      "fixer": { "model": ["claude-haiku-5.5", "gpt-6-luna"], "variant": "low" }
+    }
+  },
+  "disabled_agents": ["designer"],
+  "disabled_hooks": ["phase-reminder"]
 }
 ```
 
-`enforcement` controls how policy violations are handled:
+### Models and effort
+
+The agent files carry the default preset's model and effort. When the active preset differs (another preset, `extends`, fallback chains, or `agents` overrides), the extension applies the difference at session start as a **per-session subagent override**. This uses an experimental Copilot API.
+
+- While that override is active it replaces your `/subagents` settings for the session. Set `"apply_preset": "off"` to keep `/subagents` in charge.
+- With the default preset nothing is overridden, so `/subagents` works as usual.
+- `/preset <name>` applies to new subagent dispatches immediately. Your main session model only changes if you confirm.
+- Fallback chains use the first model your account can access. `omcs_doctor` shows the choice.
+
+### Policy
+
+`enforcement` controls how MCP and skill policy violations are handled:
 
 - `deny` (default) blocks the tool call.
 - `warn` allows the call and adds a warning.
 - `off` disables the policy hook.
 
-Model and effort values in this file are only *checked* by `omcs_doctor`; they don't re-pin the agent. Use `/subagents` for that.
+`disabled_agents` is always enforced: `task` calls to a disabled role are denied.
+
+### Prompt overrides
+
+Put `<role>.md` (replace) or `<role>_append.md` (append) in `.github/oh-my-copilot-slim/` in your repository, or in `~/.copilot/oh-my-copilot-slim/`. Use a preset subfolder (`.github/oh-my-copilot-slim/<preset>/`) for preset-specific prompts. They are applied in memory for each session and never modify the plugin. Copilot's own `.github/agents/` files are separate agents and don't override these roles. Details: [docs/configuration.md](docs/configuration.md#prompt-overrides).
+
+### ACP agents
+
+[Agent Client Protocol](https://agentclientprotocol.com) agents (for example Gemini CLI or a Claude Code ACP adapter) can be added as optional delegates in your **user** config under `acpAgents`. Nothing is installed or enabled by default; install and log in to the agent yourself. Permission requests from the agent are confirmed in a dialog by default. See [docs/configuration.md](docs/configuration.md#acp-agents).
 
 ## Compatibility with upstream
 
 This is an adaptation, not a drop-in port. The important differences:
 
 - **Models are preferences, not pins.**
-  - A model you can't access falls back to the session model. `omcs_doctor` shows which models are available.
+  - A model you can't access falls back to the next model in the chain, then to the session model. `omcs_doctor` shows which models are available.
   - **If your session model is _Auto_, Copilot runs every subagent on the resolved session model** and ignores the per-role models. Pick a concrete session model to get per-role models.
-- **Skill lists**:
-  - Roles with an empty skill list are *enforced*: they don't get the `skill` tool at all.
-  - Named lists (oracle, explorer, fixer) are enforced by a best-effort hook. It only applies when Copilot reports which agent is calling the tool. Otherwise the policy is advisory, injected into the subagent's prompt.
-  - Copilot's agent files have no per-agent skill allow-list.
-- **MCP lists**:
-  - For subagents, MCP access is restricted by each agent's `tools` list.
-  - The orchestrator's `!context7` rule is enforced by the hook when the orchestrator is the selected main agent.
-  - CodeGraph is bundled as a plugin-level server named `codegraph`; it replaces a user-defined server with that name (see [CodeGraph](#codegraph)).
+- **Skill and MCP lists are enforced by tool lists and a hook.**
+  - Subagents only get the tools in their agent file; MCP servers are listed as `server/*`.
+  - Copilot always gives agents the `skill` tool, so skill lists (including empty ones) are enforced by the policy hook. That only works when Copilot reports which agent made the call; otherwise the policy is advisory, injected into the subagent's prompt.
   - Tool allow-lists are not an OS sandbox. Read-only roles with shell access are read-only by instruction.
 - **Orchestration** uses Copilot's native background agents. Upstream's OpenCode-specific session tools and hooks are mapped to Copilot equivalents and are not re-implemented.
-- **The `variant` field** maps to Copilot's `reasoningEffort`.
+- **`/interview`** runs in the chat with Copilot's question prompts instead of upstream's local browser page.
+- **Image routing** can't remove the image from the main model's input; it adds the saved paths and a delegation hint.
+- **smartfetch** extracts content heuristically (no JavaScript rendering, no Readability).
+- **Not ported**: terminal multiplexer panes, the companion app, the TUI sidebar, prompt-cache handling, OpenCode error-recovery hooks, the installer and update checker, and the deepwork goal/guard hooks.
 
-See [docs/compatibility.md](docs/compatibility.md) for the full mapping and the list of unverified behavior.
+See [docs/compatibility.md](docs/compatibility.md) for the per-feature parity table and the list of unverified behavior.
 
 ## Development
 
 ```sh
-copilot --plugin-dir .   # load this checkout without installing
+copilot --plugin-dir .         # load this checkout without installing
+node --test tests/*.test.mjs   # unit tests (no Copilot or network needed)
 ```
 
 Layout:
@@ -198,9 +247,10 @@ Layout:
 - `.github/plugin/marketplace.json`: marketplace manifest.
 - `plugin.json` → `mcpServers`: the bundled CodeGraph server.
 - `agents/`, `skills/`: the agents and skills.
-- `extensions/oh-my-copilot-slim/extension.mjs`: the extension.
+- `extensions/oh-my-copilot-slim/extension.mjs`: the extension entry point; its modules are in `lib/`.
+- `tests/`: unit tests with stubbed Copilot APIs.
 - `presets/`: the default preset.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Portions are adapted from oh-my-opencode-slim (MIT, © 2025); its license notice is reproduced in [NOTICE](NOTICE). CodeGraph is not included in this repository; it is downloaded from npm at runtime under its own MIT license.
+MIT. See [LICENSE](LICENSE). Portions are adapted from oh-my-opencode-slim (MIT, © 2025); its license notice is reproduced in [NOTICE](NOTICE). CodeGraph and ast-grep are not included in this repository; they are downloaded from npm at runtime under their own MIT licenses.

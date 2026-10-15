@@ -18,6 +18,25 @@ The following files contain text adapted from oh-my-opencode-slim (branch master
                        (its Node script was replaced by git-based change detection)
 - presets/github-copilot.json - preset shape follows the upstream configuration
                        format; the role values are the user-supplied preset
+- skills/deepwork, skills/verification-planning, skills/worktrees,
+  skills/clonedeps, skills/reflect, skills/loop-engineering
+                     - adapted from src/skills/<name>/SKILL.md (master @ 0656d3ef)
+- skills/oh-my-copilot-slim/SKILL.md - adapted from
+                       src/skills/oh-my-opencode-slim/SKILL.md (self-config skill)
+- extensions/oh-my-copilot-slim/lib/hooks.mjs and lib/council.mjs - council
+                       trigger list, Council Mode procedure, phase reminder and
+                       tool-loop guard adapted from src/hooks/{council-inject,
+                       phase-reminder,tool-loop-guard}
+- extensions/oh-my-copilot-slim/lib/commands.mjs - /deepwork, /reflect and /loop
+                       prompt templates adapted from src/hooks/{deepwork,reflect,
+                       loop-command}
+- extensions/oh-my-copilot-slim/lib/astgrep.mjs - tool shape and output format
+                       adapted from src/tools/ast-grep/
+- extensions/oh-my-copilot-slim/lib/smartfetch.mjs - behavior adapted from
+                       src/tools/smartfetch/ (reimplemented without Readability,
+                       jsdom or turndown)
+- extensions/oh-my-copilot-slim/lib/acp.mjs - ACP client handling adapted from
+                       src/tools/acp-run.ts
 
 These adaptations replace OpenCode-specific tools, hooks and permissions with
 GitHub Copilot equivalents and are modified from the originals.
@@ -29,7 +48,12 @@ Independently authored (not copied from upstream or third parties)
   third-party skill, so this project ships an independently written version.
 - skills/pragmatic-engineering/SKILL.md - not an upstream bundled skill; written
   for this project.
-- extensions/oh-my-copilot-slim/extension.mjs
+- skills/interview/SKILL.md - workflow follows upstream's /interview
+  (docs/interview.md); text written for this project.
+- extensions/oh-my-copilot-slim/extension.mjs and the remaining lib/*.mjs
+  modules (config, presets, prompts, policy, images, codegraph, doctor, core).
+  Their behavior follows upstream documentation (configuration, presets,
+  project-local customization, image routing) but the code is new.
 
 Third-party software launched at runtime (not included in this repository)
 --------------------------------------------------------------------------
@@ -39,6 +63,11 @@ Third-party software launched at runtime (not included in this repository)
   1.6.2 through npx, and omcs_codegraph_init runs its `init` command. No
   CodeGraph code or text is copied here; npm downloads it under its own license.
   CodeGraph is not affiliated with this project.
+- ast-grep (@ast-grep/cli, https://github.com/ast-grep/ast-grep), MIT License,
+  Copyright (c) 2022 Herrington Darkholme. When no ast-grep binary is on PATH,
+  the extension runs version 0.51.0 through npx. No ast-grep code is copied here.
+- ACP agents you configure yourself are third-party software under their own
+  licenses; this project does not install or ship any.
 
 oh-my-opencode-slim license
 ---------------------------
