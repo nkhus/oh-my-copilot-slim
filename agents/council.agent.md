@@ -2,7 +2,7 @@
 name: council
 description: Council synthesizer. Receives the independent responses of council seats (councillors) and produces a structured consensus report. Dispatched by the orchestrator after the councillors finish; it does not dispatch agents itself.
 model: gpt-6.1-sol
-reasoningEffort: high
+reasoning-effort: high
 tools: []
 ---
 

@@ -2,7 +2,7 @@
 name: librarian
 description: External documentation and code-example research via context7, grep.app (gh_grep), and web fetch. Use for changing APIs, version-specific behavior, official examples, and tricky library bugs.
 model: gpt-6-luna
-tools: ["read", "search", "web", "context7/*", "gh_grep/*"]
+tools: ["read", "search", "grep", "glob", "web", "web_fetch", "web_search", "context7/*", "gh_grep/*", "omcs_smartfetch", "omcs_ast_grep_search"]
 mcp-servers:
   context7:
     type: http

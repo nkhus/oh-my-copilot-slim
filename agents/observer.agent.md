@@ -2,7 +2,7 @@
 name: observer
 description: Read-only visual analysis of images, screenshots, PDFs, and diagrams. Pass the full file path; returns structured observations so media bytes stay out of the orchestrator's context.
 model: gpt-6-luna
-tools: ["read", "search"]
+tools: ["read", "search", "grep", "glob", "omcs_ast_grep_search"]
 ---
 
 <!-- Adapted from alvinunreal/oh-my-opencode-slim (MIT): src/agents/role-prompts.ts (OBSERVER). See NOTICE. -->

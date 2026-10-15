@@ -2,8 +2,8 @@
 name: fixer
 description: Fast, bounded implementation specialist. Give it a well-defined scope (files, intended change, validation). Not for discovery, decisions, design work, or one tiny edit.
 model: gpt-6-luna
-reasoningEffort: max
-tools: ["read", "search", "edit", "execute", "skill", "codegraph/*"]
+reasoning-effort: max
+tools: ["read", "search", "grep", "glob", "edit", "execute", "skill", "codegraph/*", "omcs_ast_grep_search", "omcs_ast_grep_replace"]
 ---
 
 <!-- Adapted from alvinunreal/oh-my-opencode-slim (MIT): src/agents/role-prompts.ts (FIXER). See NOTICE. -->

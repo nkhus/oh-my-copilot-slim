@@ -2,7 +2,7 @@
 name: designer
 description: UI/UX implementation and review specialist. Owns layout, visual hierarchy, spacing, typography, motion, and responsive behavior. Delegate all user-facing interface work here.
 model: gpt-6-luna
-tools: ["read", "search", "edit", "execute"]
+tools: ["read", "search", "grep", "glob", "edit", "execute", "omcs_ast_grep_search", "omcs_ast_grep_replace"]
 ---
 
 <!-- Adapted from alvinunreal/oh-my-opencode-slim (MIT): src/agents/role-prompts.ts (DESIGNER). See NOTICE. -->

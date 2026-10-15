@@ -2,7 +2,7 @@
 name: explorer
 description: Fast read-only codebase reconnaissance. Use for discovery, parallel searches, and summarized maps of unfamiliar code. Not for a known path or when full file contents are needed.
 model: gpt-6-luna
-tools: ["read", "search", "execute", "skill", "codegraph/*"]
+tools: ["read", "search", "grep", "glob", "execute", "skill", "codegraph/*", "omcs_ast_grep_search"]
 ---
 
 <!-- Adapted from alvinunreal/oh-my-opencode-slim (MIT): src/agents/role-prompts.ts (EXPLORER). See NOTICE. -->

@@ -2,8 +2,8 @@
 name: oracle
 description: Read-only strategic advisor for architecture decisions, high-risk trade-offs, persistent bugs (after 2+ failed fixes), code review, and simplification. An escalation, not a default verification step.
 model: claude-opus-5.5
-reasoningEffort: high
-tools: ["read", "search", "execute", "skill", "codegraph/*"]
+reasoning-effort: high
+tools: ["read", "search", "grep", "glob", "execute", "skill", "codegraph/*", "omcs_ast_grep_search"]
 include-custom-instructions: true
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: councillor
 description: One independent council seat. Analyzes a question read-only and returns its own answer. Dispatched by the orchestrator once per configured seat with that seat's model; not for general use.
-tools: ["read", "search"]
+tools: ["read", "search", "grep", "glob"]
 user-invocable: false
 ---
 
