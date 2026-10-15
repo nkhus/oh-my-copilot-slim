@@ -1,20 +1,88 @@
 {
-  "$comment": "Role policy for oh-my-copilot-slim. 'presets' keeps the upstream oh-my-opencode-slim preset shape; model IDs keep the 'github-copilot/' prefix, which is stripped for native Copilot. Upstream schema (informational, not loaded): https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json. Native model/effort selection comes from agents/*.agent.md and Copilot's own subagent overrides; this file drives the MCP/skill policy hook, the council roster, and omcs_doctor drift checks. The 'codegraph' MCP server is bundled by the plugin (plugin.json mcpServers, @colbymchenry/codegraph@1.6.2).",
+  "$comment": "Bundled defaults for oh-my-copilot-slim (lowest-precedence config layer; override in $COPILOT_HOME/oh-my-copilot-slim.json or <repo>/.github/oh-my-copilot-slim.json). 'presets' keeps the upstream oh-my-opencode-slim preset shape; the 'github-copilot/' model prefix is stripped for native Copilot. A preset may 'extends' one parent preset; 'model' may be a fallback chain (array of ids or {id, variant}). The active preset's model/effort is applied as a live per-session subagent override where it differs from agents/*.agent.md (apply_preset: auto|off). Upstream schema (informational, not loaded): https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json. The 'codegraph' MCP server is bundled by the plugin (plugin.json mcpServers, @colbymchenry/codegraph@1.6.2). See docs/configuration.md.",
   "preset": "github-copilot",
   "presets": {
     "github-copilot": {
-      "orchestrator": { "model": "github-copilot/gpt-6.1-sol", "skills": ["*"], "mcps": ["*", "!context7", "codegraph"] },
-      "oracle": { "model": "github-copilot/claude-opus-5.5", "variant": "high", "skills": ["simplify", "codemap"], "mcps": ["codegraph"] },
-      "council": { "model": "github-copilot/gpt-6.1-sol", "variant": "high", "skills": [], "mcps": [] },
-      "librarian": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": ["gh_grep", "context7"] },
-      "explorer": { "model": "github-copilot/gpt-6-luna", "skills": ["codemap"], "mcps": ["codegraph"] },
-      "designer": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": [] },
-      "fixer": { "model": "github-copilot/gpt-6-luna", "variant": "max", "skills": ["simplify", "pragmatic-engineering"], "mcps": ["codegraph"] },
-      "observer": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": [] }
+      "orchestrator": {
+        "model": "github-copilot/gpt-6.1-sol",
+        "skills": [
+          "*"
+        ],
+        "mcps": [
+          "*",
+          "!context7",
+          "codegraph"
+        ]
+      },
+      "oracle": {
+        "model": "github-copilot/claude-opus-5.5",
+        "variant": "high",
+        "skills": [
+          "simplify",
+          "codemap"
+        ],
+        "mcps": [
+          "codegraph"
+        ]
+      },
+      "council": {
+        "model": "github-copilot/gpt-6.1-sol",
+        "variant": "high",
+        "skills": [],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "github-copilot/gpt-6-luna",
+        "skills": [],
+        "mcps": [
+          "gh_grep",
+          "context7"
+        ]
+      },
+      "explorer": {
+        "model": "github-copilot/gpt-6-luna",
+        "skills": [
+          "codemap"
+        ],
+        "mcps": [
+          "codegraph"
+        ]
+      },
+      "designer": {
+        "model": "github-copilot/gpt-6-luna",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "github-copilot/gpt-6-luna",
+        "variant": "max",
+        "skills": [
+          "simplify",
+          "pragmatic-engineering"
+        ],
+        "mcps": [
+          "codegraph"
+        ]
+      },
+      "observer": {
+        "model": "github-copilot/gpt-6-luna",
+        "skills": [],
+        "mcps": []
+      }
     }
   },
+  "agents": {},
   "council": {
     "councillors": []
   },
-  "enforcement": "deny"
+  "enforcement": "deny",
+  "apply_preset": "auto",
+  "image_routing": "auto",
+  "disabled_hooks": [],
+  "disabled_agents": [],
+  "disabled_commands": [],
+  "interview": {
+    "outputDir": "interview"
+  },
+  "acpAgents": {}
 }
