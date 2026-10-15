@@ -1,5 +1,5 @@
 {
-  "$comment": "Role policy for oh-my-copilot-slim. 'presets' keeps the upstream oh-my-opencode-slim preset shape; model IDs keep the 'github-copilot/' prefix, which is stripped for native Copilot. Upstream schema (informational, not loaded): https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json. Native model/effort selection comes from agents/*.agent.md and Copilot's own subagent overrides; this file drives the MCP/skill policy hook, the council roster, and omcs_doctor drift checks.",
+  "$comment": "Role policy for oh-my-copilot-slim. 'presets' keeps the upstream oh-my-opencode-slim preset shape; model IDs keep the 'github-copilot/' prefix, which is stripped for native Copilot. Upstream schema (informational, not loaded): https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json. Native model/effort selection comes from agents/*.agent.md and Copilot's own subagent overrides; this file drives the MCP/skill policy hook, the council roster, and omcs_doctor drift checks. The 'codegraph' MCP server is bundled by the plugin (plugin.json mcpServers, @colbymchenry/codegraph@1.6.2).",
   "preset": "github-copilot",
   "presets": {
     "github-copilot": {

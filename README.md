@@ -10,16 +10,18 @@ It is a native Copilot **plugin** that adds:
 
 - **An eight-role agent team**: orchestrator, oracle, council, librarian, explorer, designer, fixer, and observer, plus a hidden `councillor` seat agent. Each role has its own model, reasoning effort, tools, MCP servers, and skill policy.
 - **Skills**: `simplify`, `codemap`, and `pragmatic-engineering`.
-- **A small extension** with two tools and two hooks:
-  - `omcs_doctor` checks the preset against your Copilot runtime.
+- **A bundled [CodeGraph](https://github.com/colbymchenry/codegraph) MCP server** (`codegraph`) for the roles whose preset lists it, with opt-in repository indexing.
+- **A small extension** with three tools and two hooks:
+  - `omcs_doctor` checks the preset (and CodeGraph) against your Copilot runtime.
   - `omcs_council_roster` returns the configured council seats.
+  - `omcs_codegraph_init` builds a CodeGraph index for the current repository, only after you confirm.
   - The hooks apply each role's MCP and skill policy at runtime.
 
 This is not an OpenCode launcher and does not need OpenCode.
 
 ## Install
 
-Requires GitHub Copilot with plugin support (Copilot CLI or the Copilot app).
+Requires GitHub Copilot with plugin support (Copilot CLI or the Copilot app). The bundled CodeGraph server also needs Node.js (`npx`) and, on first start, network access to download `@colbymchenry/codegraph` from npm; without them everything else still works.
 
 **CLI (recommended)**: add this repository as a plugin marketplace, then install the plugin from it:
 
@@ -57,6 +59,7 @@ copilot plugin uninstall oh-my-copilot-slim@oh-my-copilot-slim
 ```sh
 copilot plugin list   # shows oh-my-copilot-slim
 copilot skill list    # shows codemap, pragmatic-engineering, simplify under "Plugin skills"
+copilot mcp list      # shows codegraph under "Plugin servers"
 ```
 
 Then, inside a session, ask: *"run omcs_doctor"*. It prints a per-role table showing:
@@ -64,7 +67,8 @@ Then, inside a session, ask: *"run omcs_doctor"*. It prints a per-role table sho
 - whether the role's agent is registered;
 - whether the preset model is available and supports the requested reasoning effort;
 - whether its MCP servers and skills are present;
-- whether the agent files have drifted from the preset.
+- whether the agent files have drifted from the preset;
+- CodeGraph status: where the active `codegraph` server comes from, Node.js/npx availability, and whether the current repository has an index.
 
 ## Use
 
@@ -91,7 +95,20 @@ The preset values come from [`presets/github-copilot.json`](presets/github-copil
 ### MCP servers
 
 - **librarian** ships agent-scoped definitions for `context7` (`https://mcp.context7.com/mcp`) and `gh_grep` (`https://mcp.grep.app`). These are public remote endpoints, the same defaults upstream uses. Queries sent to them leave your machine.
-- **codegraph** is *not* bundled. Upstream doesn't define it either; it is your own server. If you have one, add it to Copilot's MCP config under the name `codegraph`. Until then, `omcs_doctor` reports it as `NOT CONFIGURED`, and the roles that list it simply work without it.
+- **codegraph** is bundled at plugin level (see [CodeGraph](#codegraph)).
+
+### CodeGraph
+
+The plugin starts [CodeGraph](https://github.com/colbymchenry/codegraph) (MIT, by Colby McHenry; a separate project, not affiliated with this one) as the MCP server `codegraph`:
+
+```sh
+npx -y @colbymchenry/codegraph@1.6.2 serve --mcp   # with CODEGRAPH_TELEMETRY=0
+```
+
+- **Who gets it:** orchestrator, oracle, explorer, and fixer (the roles whose preset lists `codegraph`). Council, librarian, designer, observer, and councillor don't list it in their `tools` and are also blocked by the policy hook. Plugin MCP servers are session-wide, so other agents you select, and Copilot's built-in agents that get MCP tools, may see it too.
+- **Local only.** CodeGraph reads your code and keeps its index in the repository's `.codegraph/` folder. The plugin disables its anonymous telemetry with `CODEGRAPH_TELEMETRY=0`. CodeGraph still keeps local state in `~/.codegraph/` (settings, update checks, running-server records).
+- **Indexing is opt-in.** CodeGraph only answers for repositories that have an index. Without one, agents use normal search (grep/glob/view). To index the current repository, ask: *"index this repo with codegraph"*. The orchestrator calls `omcs_codegraph_init`, which asks you to confirm (a dialog where the host supports one, otherwise the agent must ask you first) and then runs `codegraph init` for the repository's git root. It refuses your home directory and the filesystem root. You can also run it yourself: `npx -y @colbymchenry/codegraph@1.6.2 init`. Add `.codegraph/` to your global gitignore if you don't want it showing up; CodeGraph writes its own `.gitignore` inside the folder.
+- **Using your own `codegraph` server.** Copilot's documented MCP precedence is *user config (`~/.copilot/mcp-config.json`) < plugin < `--additional-mcp-config`*, so the plugin's server replaces a `codegraph` in your user config. In testing (CLI 1.0.95) it also replaced one in a workspace `.mcp.json`. `omcs_doctor` warns when your definition is shadowed. To use yours, start Copilot with `--additional-mcp-config @your-codegraph.json` (a file with an `mcpServers.codegraph` entry). `copilot mcp disable codegraph` turns off the server by name, which also disables your own definition of the same name.
 
 ### Council
 
@@ -162,6 +179,7 @@ This is an adaptation, not a drop-in port. The important differences:
 - **MCP lists**:
   - For subagents, MCP access is restricted by each agent's `tools` list.
   - The orchestrator's `!context7` rule is enforced by the hook when the orchestrator is the selected main agent.
+  - CodeGraph is bundled as a plugin-level server named `codegraph`; it replaces a user-defined server with that name (see [CodeGraph](#codegraph)).
   - Tool allow-lists are not an OS sandbox. Read-only roles with shell access are read-only by instruction.
 - **Orchestration** uses Copilot's native background agents. Upstream's OpenCode-specific session tools and hooks are mapped to Copilot equivalents and are not re-implemented.
 - **The `variant` field** maps to Copilot's `reasoningEffort`.
@@ -178,10 +196,11 @@ Layout:
 
 - `plugin.json`: plugin manifest.
 - `.github/plugin/marketplace.json`: marketplace manifest.
+- `plugin.json` → `mcpServers`: the bundled CodeGraph server.
 - `agents/`, `skills/`: the agents and skills.
 - `extensions/oh-my-copilot-slim/extension.mjs`: the extension.
 - `presets/`: the default preset.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Portions are adapted from oh-my-opencode-slim (MIT, © 2025); its license notice is reproduced in [NOTICE](NOTICE).
+MIT. See [LICENSE](LICENSE). Portions are adapted from oh-my-opencode-slim (MIT, © 2025); its license notice is reproduced in [NOTICE](NOTICE). CodeGraph is not included in this repository; it is downloaded from npm at runtime under its own MIT license.

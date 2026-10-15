@@ -3,16 +3,19 @@
 // Independently written for this project (see NOTICE). Unofficial adaptation of
 // alvinunreal/oh-my-opencode-slim; not endorsed by the upstream authors or GitHub.
 import { joinSession } from "@github/copilot-sdk/extension";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
+import { dirname, join, resolve, parse as parsePath } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { execFile } from "node:child_process";
 
 const ROLES = ["orchestrator", "oracle", "council", "librarian", "explorer", "designer", "fixer", "observer"];
 const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
 const CONFIG_FILE = "oh-my-copilot-slim.json";
 const KNOWN_MCPS = ["codegraph", "context7", "gh_grep"];
 const EXT_DIR = dirname(fileURLToPath(import.meta.url));
+const CODEGRAPH_PKG = "@colbymchenry/codegraph@1.6.2";
+const copilotHome = () => process.env.COPILOT_HOME || join(homedir(), ".copilot");
 
 function findPluginRoot() {
     if (process.env.OMCS_PLUGIN_ROOT) return resolve(process.env.OMCS_PLUGIN_ROOT);
@@ -45,10 +48,9 @@ function effortOf(role) {
 }
 
 function loadConfig(cwd) {
-    const copilotHome = process.env.COPILOT_HOME || join(homedir(), ".copilot");
     const layers = [
         { label: "plugin default", path: join(PLUGIN_ROOT, "presets", "github-copilot.json") },
-        { label: "user", path: join(copilotHome, CONFIG_FILE) },
+        { label: "user", path: join(copilotHome(), CONFIG_FILE) },
         { label: "project", path: join(cwd || process.cwd(), ".github", CONFIG_FILE) },
     ];
     const sources = [];
@@ -209,6 +211,120 @@ async function onSubagentStart(input) {
     }
 }
 
+function runCmd(cmd, args, opts = {}) {
+    return new Promise((done) => {
+        execFile(cmd, args, { timeout: 10_000, maxBuffer: 8 * 1024 * 1024, ...opts }, (err, stdout, stderr) =>
+            done({ ok: !err, stdout: String(stdout ?? ""), stderr: String(stderr ?? ""), error: err ? String(err.message ?? err) : undefined }),
+        );
+    });
+}
+
+async function repoRoot(cwd) {
+    const r = await runCmd("git", ["rev-parse", "--show-toplevel"], { cwd });
+    return r.ok ? r.stdout.trim() || undefined : undefined;
+}
+
+const hasCodegraphIndex = (dir) => existsSync(join(dir, ".codegraph", "codegraph.db"));
+
+// codegraph definitions the user made outside this plugin. Copilot's MCP precedence is
+// user/workspace config < plugin < --additional-mcp-config, so the plugin's server shadows these.
+function otherCodegraphDefs(dir) {
+    const candidates = [
+        ["user", join(copilotHome(), "mcp-config.json")],
+        ["workspace", join(dir, ".mcp.json")],
+        ["workspace", join(dir, ".github", "mcp.json")],
+    ];
+    const out = [];
+    for (const [label, path] of candidates) {
+        const r = readJson(path);
+        if (r.ok && r.value?.mcpServers && Object.hasOwn(r.value.mcpServers, "codegraph")) out.push(`${label} ${path}`);
+    }
+    return out;
+}
+
+async function codegraphStatus(cwd, serverList, mcpsOk) {
+    const lines = ["", "## CodeGraph"];
+    const warnings = [];
+    const server = serverList.find((x) => x?.name === "codegraph");
+    const root = (await repoRoot(cwd)) ?? cwd;
+    const [node, npx] = await Promise.all([runCmd("node", ["--version"]), runCmd("npx", ["--version"])]);
+
+    let serverText;
+    if (!mcpsOk) serverText = "unverified (mcp.list unavailable)";
+    else if (!server) serverText = "NOT CONFIGURED (the plugin's bundled server is missing or disabled; reinstall/enable the plugin or run `copilot mcp enable codegraph`)";
+    else {
+        const bundled = server.sourcePlugin === "oh-my-copilot-slim";
+        const from = bundled
+            ? `bundled by this plugin (${CODEGRAPH_PKG})`
+            : `${server.sourcePlugin ? `plugin ${server.sourcePlugin}` : server.source ?? "unknown source"} (overrides the bundled server)`;
+        serverText = `${server.status ?? "?"}, ${from}${server.error ? ` - error: ${server.error}` : ""}`;
+        if (server.status && !["connected", "pending"].includes(server.status))
+            warnings.push(`codegraph MCP status is "${server.status}". Agents fall back to normal search; check Node.js/npx and network access for the first npx download.`);
+    }
+    lines.push(`- MCP server \`codegraph\`: ${serverText}`);
+    lines.push(`- Node.js: ${node.ok ? node.stdout.trim() : "NOT FOUND on PATH"}; npx: ${npx.ok ? npx.stdout.trim() : "NOT FOUND on PATH"}`);
+    if (!node.ok || !npx.ok) warnings.push("codegraph needs Node.js and npx on the PATH Copilot uses to start MCP servers.");
+
+    const indexed = hasCodegraphIndex(root);
+    lines.push(`- Index for ${root}: ${indexed ? "present (.codegraph/codegraph.db)" : "none - agents use normal search; omcs_codegraph_init can create one after you confirm"}`);
+
+    const others = otherCodegraphDefs(root);
+    if (others.length && server?.sourcePlugin === "oh-my-copilot-slim")
+        warnings.push(
+            `Your own codegraph server (${others.join("; ")}) is shadowed by this plugin's bundled server (Copilot MCP precedence: user/workspace config < plugin < --additional-mcp-config). To use yours, start Copilot with --additional-mcp-config pointing at a file that defines "codegraph".`,
+        );
+    return { lines, warnings };
+}
+
+const stripAnsi = (s) => s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+
+async function codegraphInit(args, invocation) {
+    const cwd = invocation?.workingDirectory ?? process.cwd();
+    const fail = (msg) => ({ textResultForLlm: msg, resultType: "failure", error: msg });
+    const target = args?.path ? resolve(cwd, String(args.path)) : (await repoRoot(cwd)) ?? cwd;
+    if (!existsSync(target) || !statSync(target).isDirectory()) return fail(`Not a directory: ${target}`);
+    if (resolve(target) === resolve(homedir()) || resolve(target) === parsePath(resolve(target)).root)
+        return fail(`Refusing to index ${target} (home directory or filesystem root). Pass a repository path.`);
+
+    const reindex = hasCodegraphIndex(target);
+    const plan =
+        `${reindex ? "Re-run CodeGraph indexing for" : "Create a CodeGraph index for"} ${target}. ` +
+        `This runs \`npx -y ${CODEGRAPH_PKG} init --yes\` (downloads the package on first use; needs Node.js and network), ` +
+        `writes ${join(target, ".codegraph")} (a local SQLite index with its own .gitignore), and CodeGraph keeps local state in ~/.codegraph. ` +
+        `Telemetry is disabled for this run (CODEGRAPH_TELEMETRY=0). Large repositories can take several minutes.`;
+
+    let confirmedBy;
+    if (session.capabilities?.ui?.elicitation) {
+        const answer = await safe(() => session.ui.confirm(`${plan}\n\nProceed?`));
+        if (answer.ok) {
+            if (!answer.value) return { textResultForLlm: "The user declined CodeGraph indexing. Continue with normal search tools.", resultType: "rejected" };
+            confirmedBy = "user confirmation dialog";
+        }
+    }
+    if (!confirmedBy) {
+        if (args?.confirm !== true) {
+            return {
+                textResultForLlm: `Not run. ${plan}\nAsk the user explicitly whether to index this repository. Only if they agree, call omcs_codegraph_init again with confirm: true. Until then, use normal search tools.`,
+                resultType: "success",
+            };
+        }
+        confirmedBy = "confirm: true (no confirmation dialog available in this host)";
+    }
+
+    const r = await runCmd("npx", ["-y", CODEGRAPH_PKG, "init", "--yes", target], {
+        cwd: target,
+        timeout: 20 * 60_000,
+        env: { ...process.env, CODEGRAPH_TELEMETRY: "0" },
+    });
+    const output = stripAnsi(`${r.stdout}\n${r.stderr}`).trim().split(/\r?\n/).filter(Boolean).slice(-20).join("\n");
+    if (!r.ok || !hasCodegraphIndex(target))
+        return fail(`CodeGraph indexing failed for ${target} (${r.error ?? "no index was created"}).\n${output}\nContinue with normal search tools.`);
+    return {
+        textResultForLlm: `CodeGraph index ready at ${join(target, ".codegraph")} (confirmed via ${confirmedBy}).\n${output}\nUse codegraph_explore with projectPath "${target}".`,
+        resultType: "success",
+    };
+}
+
 async function doctor(cwd) {
     const cfg = loadConfig(cwd);
     const files = readAgentFiles();
@@ -285,9 +401,11 @@ async function doctor(cwd) {
         lines.push(
             `| ${role} | ${regText} | ${model ?? "-"} | ${avail} | ${effortText} | ${drift.length ? `DRIFT: ${drift.join(", ")}` : "ok"} | ${mcpText.join(" ") || "none"} | ${skillText.join(" ") || "none"} |`,
         );
-        if (explicitNames(def.mcps).includes("codegraph") && !serverList.some((x) => x?.name === "codegraph") && mcps.ok)
-            warnings.push(`${role}: codegraph MCP is not configured. It is an external prerequisite; add your own codegraph server to Copilot's MCP config.`);
     }
+
+    const cg = await codegraphStatus(cwd, serverList, mcps.ok);
+    lines.push(...cg.lines);
+    warnings.push(...cg.warnings);
 
     const seats = councilSeats(cfg);
     if (!seats.length) warnings.push("Council roster is empty: council will not run until you configure seats (see README).");
@@ -344,6 +462,19 @@ session = await joinSession({
                 "oh-my-copilot-slim: return the configured council seats (name, model, reasoning effort, availability) for an explicitly requested council run, or explain that none are configured.",
             parameters: { type: "object", properties: {} },
             handler: async (_args, invocation) => councilRoster(invocation?.workingDirectory ?? process.cwd()),
+        },
+        {
+            name: "omcs_codegraph_init",
+            description:
+                "oh-my-copilot-slim: build a CodeGraph index (.codegraph/) for the current repository so the codegraph MCP server can answer codegraph_explore. Opt-in only: never call it unless the user asked for indexing or agreed to it. It asks the user in a confirmation dialog when the host supports one; otherwise it does nothing unless confirm is true, which you may only set after the user explicitly agreed.",
+            parameters: {
+                type: "object",
+                properties: {
+                    confirm: { type: "boolean", description: "Set true only after the user explicitly agreed to index this repository." },
+                    path: { type: "string", description: "Directory to index. Defaults to the git root of the working directory." },
+                },
+            },
+            handler: codegraphInit,
         },
     ],
     hooks: { onPreToolUse, onSubagentStart },

@@ -35,7 +35,10 @@ from the orchestrator and focus on implementation.
 
 **Skills and MCP (oh-my-copilot-slim policy)**:
 - Skills you may load: `simplify`, `pragmatic-engineering`.
-- MCP servers you may use: `codegraph` (when configured).
+- MCP servers you may use: `codegraph` (bundled). Call `codegraph_explore` with
+  `projectPath` set to the repository root. It only answers when the repository
+  has a `.codegraph/` index; if it reports no index or fails, use grep/glob/view.
+  Never build or rebuild an index yourself (`codegraph init`/`index`).
 
 **Output format**:
 <summary>

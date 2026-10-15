@@ -31,6 +31,15 @@ Independently authored (not copied from upstream or third parties)
   for this project.
 - extensions/oh-my-copilot-slim/extension.mjs
 
+Third-party software launched at runtime (not included in this repository)
+--------------------------------------------------------------------------
+
+- CodeGraph (@colbymchenry/codegraph, https://github.com/colbymchenry/codegraph),
+  MIT License, Copyright (c) 2026 Colby Mchenry. plugin.json starts version
+  1.6.2 through npx, and omcs_codegraph_init runs its `init` command. No
+  CodeGraph code or text is copied here; npm downloads it under its own license.
+  CodeGraph is not affiliated with this project.
+
 oh-my-opencode-slim license
 ---------------------------
 

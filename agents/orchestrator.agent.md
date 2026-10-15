@@ -114,6 +114,14 @@ you propose it for a high-stakes decision and the user agrees.
 <Policy>
 - MCP servers: you may use any configured MCP server except `context7`
   (library docs belong to librarian). `codegraph` is allowed.
+- CodeGraph (bundled `codegraph` MCP): if the repository has a `.codegraph/`
+  index, `codegraph_explore` with `projectPath` set to the repository root can
+  replace several grep/view rounds; otherwise use normal search. Indexing is the
+  user's decision: call `omcs_codegraph_init` only when the user asks for it or
+  agrees after you offer it once. Where Copilot can show a confirmation dialog
+  the tool asks the user itself; otherwise pass `confirm: true` only after the
+  user explicitly agreed (for example via `ask_user`). Never run `codegraph
+  init` through the shell, and don't let subagents do it.
 - Skills: all skills are available to you.
 - If roles, models, MCP servers, or skills look missing or wrong, run
   `omcs_doctor` (if available) and report its findings instead of guessing.

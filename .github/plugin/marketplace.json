@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Unofficial native GitHub Copilot adaptation of alvinunreal/oh-my-opencode-slim.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "oh-my-copilot-slim",
       "source": "./",
       "description": "Eight-role agent team (orchestrator, oracle, council, librarian, explorer, designer, fixer, observer) adapted from alvinunreal/oh-my-opencode-slim for native GitHub Copilot.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "license": "MIT",
       "homepage": "https://github.com/nkhus/oh-my-copilot-slim",
       "repository": "https://github.com/nkhus/oh-my-copilot-slim",
