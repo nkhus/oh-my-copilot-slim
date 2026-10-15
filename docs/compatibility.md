@@ -45,6 +45,7 @@ Tool lists and hooks are not an OS sandbox. Read-only roles that keep shell acce
 
 Everything below was verified with Copilot CLI 1.0.95 and an isolated `COPILOT_HOME`:
 
+- Both install paths install from GitHub: `copilot plugin marketplace add nkhus/oh-my-copilot-slim` followed by `copilot plugin install oh-my-copilot-slim@oh-my-copilot-slim`, and `copilot plugin install nkhus/oh-my-copilot-slim`. `plugin list` shows v0.1.0, and all nine agents, the extension, and the three skills are installed.
 - `copilot --plugin-dir <checkout> plugin list` lists the plugin, and `copilot skill list` lists the three plugin skills.
 - All agent and skill frontmatter parses as YAML. Field names follow the Copilot custom-agent reference.
 - The extension loads in a live Copilot session.

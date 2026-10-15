@@ -21,18 +21,20 @@ This is not an OpenCode launcher and does not need OpenCode.
 
 Requires GitHub Copilot with plugin support (Copilot CLI or the Copilot app).
 
-**CLI**: install the plugin straight from this repository:
-
-```sh
-copilot plugin install nkhus/oh-my-copilot-slim
-```
-
-Or add the repository as a marketplace, then install from it:
+**CLI (recommended)**: add this repository as a plugin marketplace, then install the plugin from it:
 
 ```sh
 copilot plugin marketplace add nkhus/oh-my-copilot-slim
 copilot plugin install oh-my-copilot-slim@oh-my-copilot-slim
 ```
+
+Installing directly from the repository also works:
+
+```sh
+copilot plugin install nkhus/oh-my-copilot-slim
+```
+
+Copilot CLI 1.0.95 marks direct repo installs as deprecated in favor of `plugin@marketplace`.
 
 **Copilot app**: go to **Customize → Plugins**, add the `nkhus/oh-my-copilot-slim` repository (or the marketplace above), and enable **oh-my-copilot-slim**.
 
@@ -43,11 +45,11 @@ git clone https://github.com/nkhus/oh-my-copilot-slim
 copilot --plugin-dir ./oh-my-copilot-slim
 ```
 
-**Update or remove**:
+**Update or remove**: use the plugin name exactly as `copilot plugin list` shows it (`oh-my-copilot-slim@oh-my-copilot-slim` for a marketplace install, `oh-my-copilot-slim` for a direct install):
 
 ```sh
-copilot plugin update oh-my-copilot-slim
-copilot plugin uninstall oh-my-copilot-slim
+copilot plugin update oh-my-copilot-slim@oh-my-copilot-slim
+copilot plugin uninstall oh-my-copilot-slim@oh-my-copilot-slim
 ```
 
 ### Verify the install
