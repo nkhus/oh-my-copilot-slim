@@ -1,0 +1,20 @@
+{
+  "$comment": "Role policy for oh-my-copilot-slim. 'presets' keeps the upstream oh-my-opencode-slim preset shape; model IDs keep the 'github-copilot/' prefix, which is stripped for native Copilot. Upstream schema (informational, not loaded): https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json. Native model/effort selection comes from agents/*.agent.md and Copilot's own subagent overrides; this file drives the MCP/skill policy hook, the council roster, and omcs_doctor drift checks.",
+  "preset": "github-copilot",
+  "presets": {
+    "github-copilot": {
+      "orchestrator": { "model": "github-copilot/gpt-6.1-sol", "skills": ["*"], "mcps": ["*", "!context7", "codegraph"] },
+      "oracle": { "model": "github-copilot/claude-opus-5.5", "variant": "high", "skills": ["simplify", "codemap"], "mcps": ["codegraph"] },
+      "council": { "model": "github-copilot/gpt-6.1-sol", "variant": "high", "skills": [], "mcps": [] },
+      "librarian": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": ["gh_grep", "context7"] },
+      "explorer": { "model": "github-copilot/gpt-6-luna", "skills": ["codemap"], "mcps": ["codegraph"] },
+      "designer": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": [] },
+      "fixer": { "model": "github-copilot/gpt-6-luna", "variant": "max", "skills": ["simplify", "pragmatic-engineering"], "mcps": ["codegraph"] },
+      "observer": { "model": "github-copilot/gpt-6-luna", "skills": [], "mcps": [] }
+    }
+  },
+  "council": {
+    "councillors": []
+  },
+  "enforcement": "deny"
+}

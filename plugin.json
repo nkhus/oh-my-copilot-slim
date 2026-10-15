@@ -1,0 +1,17 @@
+{
+  "name": "oh-my-copilot-slim",
+  "description": "Unofficial native GitHub Copilot adaptation of alvinunreal/oh-my-opencode-slim: an eight-role agent team (orchestrator, oracle, council, librarian, explorer, designer, fixer, observer) with per-role models, reasoning effort, MCP/skill policy, and a preset doctor.",
+  "version": "0.1.0",
+  "author": {
+    "name": "nkhus",
+    "url": "https://github.com/nkhus"
+  },
+  "homepage": "https://github.com/nkhus/oh-my-copilot-slim",
+  "repository": "https://github.com/nkhus/oh-my-copilot-slim",
+  "license": "MIT",
+  "keywords": ["agents", "orchestrator", "subagents", "council", "oh-my-opencode-slim", "adaptation"],
+  "category": "productivity",
+  "agents": "agents/",
+  "skills": "skills/",
+  "extensions": "extensions/"
+}
